@@ -11,10 +11,6 @@ HUB_EXTENSION="$(basename "$0" | sed -e 's/hub-/hubctl-/g' -e 's/-/ /g')"
 PATH="$HUB_HOME:$HUB_HOME/bin:$HUB_WORKDIR:$HUB_WORKDIR/bin:$PATH"
 export PATH
 
-ident() {
-  sed 's/^/  /'
-}
-
 usage() {
   cat << EOF
 Reads configuration information in ${HUB_FILES:-hub.yaml} and configures stack for deployment.
@@ -50,16 +46,6 @@ EOF
     fi
     $_usage_configure --help
   done
-}
-
-real_files() {
-  # shellcheck disable=SC2068
-  for f in $@; do
-    if test -f "$f"; then
-      printf " %s" "$f"
-    fi
-  done
-  echo
 }
 
 VERBOSE=false
@@ -127,6 +113,20 @@ done
 if $VERBOSE; then
   set -x
 fi
+
+ident() {
+  sed 's/^/  /'
+}
+
+real_files() {
+  # shellcheck disable=SC2068
+  for f in $@; do
+    if test -f "$f"; then
+      printf " %s" "$f"
+    fi
+  done
+  echo
+}
 
 TEMP_FILES=""
 temp_file(){
@@ -241,7 +241,7 @@ if $HELP; then
 fi
 
 # shellcheck disable=SC2086
-HUB_FILES="$(real_files $HUB_FILES)"
+HUB_FILES="$(real_files $HUB_FILES | xargs)"
 export HUB_FILES
 trap 'finalize $?' EXIT
 
@@ -316,5 +316,5 @@ fi
 
 if ! dotenv contains "HUB_ELABORATE"; then
   echo "* Setting hubctl elaborate to local file"
-  dotenv set  "HUB_ELABORATE" "$(files abspath "$HUB_WORKDIR/.hub/$HUB_DOMAIN_NAME.elaborate")"
+  dotenv set "HUB_ELABORATE" "$(files abspath "$HUB_WORKDIR/.hub/$HUB_DOMAIN_NAME.elaborate")"
 fi

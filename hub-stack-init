@@ -17,53 +17,6 @@ export HUB_WORKDIR
 
 KNOWN_URLS=""
 
-is_url() {
-  echo "$1" | grep -e '[[:alnum:]]*://' >/dev/null 2>&1
-}
-
-get_filepath() {
-  if is_url "$1"; then
-    echo "$HUB_WORKDIR/$(basename "$f")"
-  else
-    echo "$1"
-  fi
-}
-
-maybe_download() {
-  filepath="$(get_filepath "$1")"
-  if test -f "$filepath"; then
-    echo "(exists)"
-  elif is_url "$1"; then
-    files download "$1" "$filepath"
-    echo "(downloaded)"
-    KNOWN_URLS=$(dirname "$1" | xargs)
-  else
-    for url in $KNOWN_URLS; do
-      # shellcheck disable=SC2001
-      if files download "$url/$1" "$HUB_WORKDIR/$1"; then
-        echo "(downloaded)"
-        break
-      fi
-    done
-  fi
-  test -f "$filepath"
-}
-
-
-real_files() {
-  # shellcheck disable=SC2068
-  for f in $@; do
-    if test -f "$f"; then
-      printf " %s" "$f"
-    fi
-  done
-  echo
-}
-
-toJson() {
-  yq e -NM -o=json "$1"
-}
-
 # shellcheck disable=SC2120
 usage() {
   cat << EOF
@@ -103,17 +56,6 @@ Flags:
   -V, --verbose               Verbose outputs for debug purposes
   -h, --help                  Print this message
 EOF
-}
-
-ident() {
-  sed 's/^/  /'
-}
-
-finalize() {
-  rv="$?"
-  # shellcheck disable=SC2068
-  rm -rf $@
-  exit $rv
 }
 
 VERBOSE=false
@@ -165,8 +107,66 @@ if $VERBOSE; then
   set -x
 fi
 
+ident() {
+  sed 's/^/  /'
+}
+
+finalize() {
+  rv="$?"
+  # shellcheck disable=SC2068
+  rm -rf $@
+  exit $rv
+}
+
+is_url() {
+  echo "$1" | grep -e '[[:alnum:]]*://' >/dev/null 2>&1
+}
+
+get_filepath() {
+  if is_url "$1"; then
+    echo "$HUB_WORKDIR/$(basename "$f")"
+  else
+    echo "$1"
+  fi
+}
+
+maybe_download() {
+  filepath="$(get_filepath "$1")"
+  if test -f "$filepath"; then
+    echo "(exists)"
+  elif is_url "$1"; then
+    files download "$1" "$filepath"
+    echo "(downloaded)"
+    KNOWN_URLS=$(dirname "$1" | xargs)
+  else
+    for url in $KNOWN_URLS; do
+      # shellcheck disable=SC2001
+      if files download "$url/$1" "$HUB_WORKDIR/$1"; then
+        echo "(downloaded)"
+        break
+      fi
+    done
+  fi
+  test -f "$filepath"
+}
+
+
+real_files() {
+  # shellcheck disable=SC2068
+  for f in $@; do
+    if test -f "$f"; then
+      printf " %s" "$f"
+    fi
+  done
+  echo
+}
+
+toJson() {
+  yq e -NM -o=json "$1"
+}
+
 if test -z "$HUB_FILES" -a -f "$HUB_WORKDIR/hub.yaml"; then
-  HUB_FILES="$HUB_WORKDIR/hub.yaml"
+  HUB_FILES="hub.yaml"
 fi
 
 if test -f "$HUB_WORKDIR/.env" -a -z "$HUB_USE_FORCE"; then
@@ -404,9 +404,9 @@ if test -n "$SOURCE_HUB_STATE"; then
       exit 13
     fi
     if test -s "$temp"; then
-      state_status="$(${hubctl} explain "${temp}" --json | jq -cMr '.status | select(.)')"
+      state_status="$(hubctl explain "${temp}" --json | jq -cMr '.status | select(.)')"
       echo "  State status: ${state_status}"
-      state_msg="$(${hubctl} explain "${temp}" --json | jq -cMr '.message | select(.)')"
+      state_msg="$(hubctl explain "${temp}" --json | jq -cMr '.message | select(.)')"
       if test -n "${state_msg}"; then
         echo "  Message: ${state_msg}"
       fi
