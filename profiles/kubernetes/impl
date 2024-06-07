@@ -42,6 +42,8 @@ if test -f ".env"; then
   eval "$(dotenv -f "$HUB_WORKDIR/.env" export -f ".env" )"
 fi
 
+kubectl=${kubectl:-kubectl}
+
 TOOLBOX_NAMESPACE=${TOOLBOX_NAMESPACE:-hubctl}
 ID=$(gen_random 8)
 
@@ -94,7 +96,7 @@ finalize() {
   done
   set -e
   echo -n "* Cleaning toolbox-$ID: "
-  kubectl delete -f "$1" >/dev/null
+  $kubectl delete -f "$1" >/dev/null
   echo "Done"
   rm -f "$1"
   if test "$rv" != "0"; then
@@ -133,13 +135,14 @@ fi
 
 yq < "$temp"
 
-kubectl="kubectl -n $TOOLBOX_NAMESPACE"
 echo -n "* Checking presence of $TOOLBOX_NAMESPACE namespace: "
-if ! kubectl get namespace "$TOOLBOX_NAMESPACE" -o "name" 2>/dev/null; then
+if ! $kubectl get namespace "$TOOLBOX_NAMESPACE" -o "name" 2>/dev/null; then
   echo "not found"
   echo -n "  Deploying namespace: "
-  kubectl create namespace "$TOOLBOX_NAMESPACE"
+  $kubectl create namespace "$TOOLBOX_NAMESPACE"
 fi
+
+kubectl="$kubectl -n $TOOLBOX_NAMESPACE"
 
 echo -n "* Scheduling a pod toolbox-$ID: "
 if $kubectl -f "$temp" apply >/dev/null; then
