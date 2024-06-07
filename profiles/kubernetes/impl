@@ -7,8 +7,6 @@
 
 # A wrapper around `hub` however it will use pod (see ./template)
 
-set -o pipefail
-
 usage() {
     cat << EOF
 
@@ -46,6 +44,8 @@ fi
 
 TOOLBOX_NAMESPACE=${TOOLBOX_NAMESPACE:-hubctl}
 ID=$(gen_random 8)
+
+set -o pipefail
 
 HUB_ARGS=
 PASS_ENV=
